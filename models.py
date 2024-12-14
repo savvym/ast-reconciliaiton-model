@@ -6,7 +6,6 @@ from pydantic import (
     Field,
     model_validator,
     ValidationInfo,
-    ConfigDict
 )
 
 class Model(BaseModel):
@@ -14,7 +13,7 @@ class Model(BaseModel):
         self.__pydantic_validator__.validate_python(
             data,
             self_instance=self,
-            context= {},
+            context= data.get('context', {}),
         )
         
     @model_validator(mode='before')
@@ -22,6 +21,7 @@ class Model(BaseModel):
     def _construct(cls, data: dict, info: ValidationInfo) -> Any:
         context = info.context
         # 初始化
+        print(context)
         for field, value in data.items():
             context.get('id', []).append(field)
             context['field_' + field] = value
@@ -44,7 +44,7 @@ class Model(BaseModel):
                         continue
                     if isinstance(ret, list):
                         for r in ret:
-                            data[field_name].append(element_type(**{extra['key']: r}))
+                            data[field_name].append(element_type(**{extra['key']: r, "context": context}))
                 else:
                     data[field_name] = annotation()
                     if not ret:
@@ -139,11 +139,5 @@ class LoadBalance(Model):
                                       query='LBId', 
                                       key='uListenerId')
       
-# d = {'rsip': '192.168.1.2', 'rsport': [1, 4]}
-# d1 = Device(**d)
-# d2 = Device(rsip="192.168.1.3", rsport=[1, 4], weight=10)
-# loc = Location(uLocationId='uloc-1', domain='', url='', Devices=[d1, d2])
-# lis = Listener(uListenerId='ulis-1', protocol='tcp', vport=80, Locations=[loc])
-# lb = LoadBalance(LBId=13213, uLBId='lb-sa', vip='10.0.1.3', vpcId=32321, Listeners=[lis])
 lb = LoadBalance(LBId=123)
 print(lb)
