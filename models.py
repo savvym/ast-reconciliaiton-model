@@ -7,24 +7,20 @@ from pydantic import (
     model_validator,
     ValidationInfo,
 )
+import sqlite3
 
 class Model(BaseModel):
     def __init__(self, /, **data: Any) -> None:
         self.__pydantic_validator__.validate_python(
             data,
             self_instance=self,
-            context= data.get('context', {}),
+            context=data.get('context', {})
         )
         
     @model_validator(mode='before')
     @classmethod
     def _construct(cls, data: dict, info: ValidationInfo) -> Any:
         context = info.context
-        # 初始化
-        print(context)
-        for field, value in data.items():
-            context.get('id', []).append(field)
-            context['field_' + field] = value
         for field_name, field_info in cls.model_fields.items():
             extra = field_info.json_schema_extra
             source = extra.get('source')
@@ -92,6 +88,7 @@ db = {
     
 }
 def db_adapter(query, location):
+    
     return db[query].get(location)
 
 class Device(Model):
@@ -134,6 +131,10 @@ class LoadBalance(Model):
     uLBId: str = Field(source={'type': 'db', 'adapter': db_adapter}, 
                        location='uLBId', 
                        query='LBId')
+    vip: str = Field(source={'type': 'db', 'adapter': db_adapter}, 
+                     location= 'vip',
+                     query='LBId', 
+                     key='vip')
     Listeners: list[Listener] = Field(source={'type': 'db', 'adapter': db_adapter}, 
                                       location='uListenerId', 
                                       query='LBId', 
