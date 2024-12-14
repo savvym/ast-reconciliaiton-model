@@ -38,13 +38,17 @@ class Model(BaseModel):
                 ret = adapter(data[query], location)
                 annotation = field_info.annotation
                 if get_origin(annotation) is list:
+                    data[field_name] = []
                     element_type = get_args(annotation)[0]
+                    if not ret:
+                        continue
                     if isinstance(ret, list):
                         for r in ret:
-                            if field_name not in data:
-                                data[field_name] = []
                             data[field_name].append(element_type(**{extra['key']: r}))
                 else:
+                    data[field_name] = annotation()
+                    if not ret:
+                        continue
                     data[field_name] = annotation(ret)
                 # 进行List类型的操作
         return data
@@ -65,7 +69,8 @@ db = {
     },
     'loc-1': {
         "domain": "baidu.com",
-        "url": "/index"
+        "url": "/index",
+        "deviceId": ['dev-1', 'dev-2']
     },
     'loc-2': {
         "domain": "baidu.com",
@@ -74,20 +79,29 @@ db = {
     'loc-3': {
         "domain": "baidu.com",
         "url": "/index"
+    }, 
+    'dev-1' : {
+        "rsip": "10.0.1.2",
+        "rsport": 8080
+    },
+    'dev-2' : {
+        "rsip": "10.0.1.2",
+        "rsport": 8888
     }
     
     
 }
 def db_adapter(query, location):
-    return db[query][location]
+    return db[query].get(location)
 
 class Device(Model):
-    rsip: str = Field(source={'type': 'db'}, 
+    deviceId: str = Field(source={'type': 'primary', 'adapter': db_adapter})
+    rsip: str = Field(source={'type': 'db', 'adapter': db_adapter}, 
                       location='rsip', 
-                      query='LBId')
-    rsport: int = Field(source={'type': 'db'}, 
+                      query='deviceId')
+    rsport: int = Field(source={'type': 'db', 'adapter': db_adapter}, 
                         location='rsport', 
-                        query='LBId')
+                        query='deviceId')
 
 class Location(Model):
     uLocationId: str = Field(source={'type': 'primary', 'adapter': db_adapter})
@@ -97,6 +111,10 @@ class Location(Model):
     url: str = Field(source={'type': 'db', 'adapter': db_adapter}, 
                      location='url', 
                      query='uLocationId')
+    Devices: list[Device] = Field(source={'type': 'db', 'adapter': db_adapter}, 
+                     location='deviceId', 
+                     query='uLocationId',
+                     key='deviceId')
 
 class Listener(Model):
     uListenerId: str = Field(source={'type': 'primary'})
