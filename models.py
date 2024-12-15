@@ -121,11 +121,27 @@ def get_location(vip, vpcId, protocol, vport, domain, url):
         return {}
     return location[0]
 
+
+@cache
+def get_devices(vip, vpcId, protocol, vport, domain, url, rsip, rsport):
+    loc = get_location(vip, vpcId, protocol, vport, domain, url)
+    if not loc:
+        return {}
+    devices = loc['Devices']
+    rs = [rs for rs in devices
+                if rs['rsip'].lower() == rsip and rs['rsport'] == rsport]
+    if not rs:
+        return {}
+    return rs[0]
+
 vip = "42.194.174.26"
 vpcId = -1
 
+lb = get_lb(vip, vpcId)
+listener = get_listener(vip, vpcId, 'HTTPS', 5601)
 location = get_location(vip, vpcId, 'HTTPS', 5601, "es-rkili2t7.kibana.tencentelasticsearch.com", "/")
-print(location)
+rs = get_devices(vip, vpcId, 'HTTPS', 5601, "es-rkili2t7.kibana.tencentelasticsearch.com", "/", "9.99.64.9", 5601)
+print(rs)
 # class Model(BaseModel):
 #     def __init__(self, /, **data: Any) -> None:
 #         self.__pydantic_validator__.validate_python(
